@@ -6,7 +6,7 @@ CREATE TABLE snapshots (
   --  tick_id SERIAL NOT NULL ,
     exchange VARCHAR (50),
     symbol VARCHAR (50) NOT NULL,
-    tstamp BIGINT NOT NULL PRIMARY KEY,
+    tstamp BIGINT NOT NULL UNIQUE PRIMARY KEY,
     l_tstamp BIGINT NOT NULL,
     
     asks_01_price REAL NOT NULL,
