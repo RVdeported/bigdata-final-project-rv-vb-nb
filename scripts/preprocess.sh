@@ -2,12 +2,12 @@
 
 echo "Unzipping the data..."
 
-FILE=./data/bitmex_book_snapshot_25_2020-09-01_XBTUSD.csv
+FILE=./data/questdb-query-1683731860412.csv
 if [ -f "$FILE" ]
 then
     echo "File is unzipped, skipping..."
 else
-    unzip ./data/quant_data.zip -d ./data/
+    unzip ./data/binance_btcusdt_5_100.zip -d ./data/
 fi
 
 

@@ -15,6 +15,6 @@ sqoop import-all-tables -Dmapreduce.job.user.classpath.first=true \
     --as-avrodatafile \
     --compression-codec=snappy \
     --outdir /project/avsc \
-    --m 4
+    --m 12
 hdfs dfs -put /project/avsc/snapshots.avsc /project/
 rm -rf /project/
