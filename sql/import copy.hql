@@ -36,6 +36,7 @@ SELECT * from snapshots limit 10;
 
 DROP TAble IF EXISTS snapshots_part_buck;
 CREATE EXTERNAL TABLE snapshots_part_buck(
+     INT,
     `exchange` varchar(50),
     `tstamp` BIGINT,
     l_tstamp BIGINT,
@@ -165,10 +166,10 @@ CREATE EXTERNAL TABLE snapshots_part_buck(
     bids_25_price DECIMAL(7, 2),
     bids_25_amount INT 
 ) 
-PARTITIONED BY (tstamp BIGINT) 
-CLUSTERED BY (l_tstamp) into 12 buckets
+PARTITIONED BY (`minutes` BIGINT) 
+CLUSTERED BY (tstamp) into 12 buckets
 STORED AS AVRO LOCATION '/project/snapshots_part_buck' 
 TBLPROPERTIES ('AVRO.COMPRESS'='SNAPPY');
 
-INSERT INTO snapshots_part_buck PARTITION (tstamp) SELECT * FROM snapshots;
+INSERT INTO snapshots_part_buck PARTITION (`minutes`) SELECT  * FROM snapshots;
 
