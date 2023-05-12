@@ -1,5 +1,7 @@
 #!/bin/bash
 
+pip install -r ./requirements.txt
+
 su postgres -c "psql -U postgres -c 'DROP DATABASE IF EXISTS quant_pr;'"
 su postgres -c "psql -U postgres -c 'CREATE DATABASE quant_pr;'"
 

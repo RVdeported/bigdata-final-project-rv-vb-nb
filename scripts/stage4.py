@@ -3,6 +3,7 @@ import pandas as pd
 import altair as alt
 import numpy as np
 from sklearn.metrics import confusion_matrix as cm
+from backtest import backtest
 
 # =============Intro===============
 st.title("Price trend prediction using the high-frequence Limited Order book data")
@@ -230,19 +231,19 @@ st.altair_chart(base_1, use_container_width=True)
 st.write("# Final model results")
 st.write('''
     We evaluated performance of the three models: Gradient Bosting Classifier Tree, Supported Vector Machine and 
-    Multilayer Perceptron Classification model. According to our analysis, the Supported Vector machine performed
+    Multilayer Perceptron Classification model. According to our analysis, the MPC model performed
     better than the other and thus we use this model as the primary one. We used the following
     model parametrs during the training stage:
     ''')
 st.subheader('Final model key parametrs')
 st.table(pd.DataFrame([
-    ['maxIter', 30], 
-    ['aggregationDepth', 4], 
-    ['tol',1e-04]]
+    ['maxIter', 40], 
+    ['layers', [12, 512,128,2]], 
+    ['stepSize',3e-03]]
     , columns = ['setting', 'value']))
 
 
-svc_res = pd.read_csv("./output/predictions_svc.csv")
+svc_res = pd.read_csv("./output/predictions_mpc.csv")
 matrix = cm(
     svc_res["label"].values, 
     svc_res["prediction"].values
@@ -273,11 +274,29 @@ text = base_1.mark_text(baseline='middle',fontSize=24).encode(
 )
 
 st.write('''
-    Overall we achieved 64 percent of accracy which exceeds the result of a random coin toss.
+    Overall we achieved 64 percent of accuracy on the test data which exceeds the result of a random coin toss.
+    The accuracy on training data totaled 67 percent which indicates limited risk of overfitting.
     As we may observe from the confusion matrix below, we achieved stable result without imbalance in
     recall or precision metrics.
     ''')
 st.subheader('Plot 9: Confusion matrix')
 st.altair_chart(base_1 + text, use_container_width=True)
 
+st.write('''
+    In order to evaluate significance of our model, we conducted a backtest to ensure that
+    our signals may be viable. Overall we achieved apprx. _0.14%_ of daily return rate
+    which corresponds to 51% of annual income. Of course this limited test
+    is not enough to prove the model itself is viable, however,
+    it does indicate viability of the generated trend indicator.
+    ''')
 
+b_test = backtest()
+
+base_1 = alt.Chart(b_test).encode(
+    alt.X('timestamp:T', axis=alt.Axis(labelAngle=-45)),
+    alt.Y("balance", title="balance", scale=alt.Scale(zero=False)),
+    color=alt.value("#06982d"),
+).mark_line()
+st.write(b_test.shape)
+st.subheader('Plot 10: Backtest results')
+st.altair_chart(base_1, use_container_width=True)
