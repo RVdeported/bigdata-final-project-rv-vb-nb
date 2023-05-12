@@ -2,14 +2,16 @@ import pyspark.sql.functions as F
 from pyspark.sql import SparkSession
 from pyspark.ml import Pipeline
 from pyspark.sql.window import Window
-from pyspark.ml.feature import MinMaxScaler, VectorAssembler
-from pyspark.ml.classification import GBTClassifier
-from pyspark.ml.evaluation import BinaryClassificationEvaluator as BCE
 
-from operator import add
-from functools import reduce
+from pyspark.ml.classification import GBTClassifier, LinearSVC, MultilayerPerceptronClassifier
+from pyspark.ml.evaluation import BinaryClassificationEvaluator as BCE
+from pyspark.ml.feature import PCA
+
+from pyspark.sql.types import StructType,StructField, StringType, DoubleType
 from datetime import datetime
 
+from functools import reduce
+from operator import add
 
 spark = SparkSession.builder\
     .appName("BDT Project")\
@@ -25,19 +27,12 @@ spark = SparkSession.builder\
 
 sc = spark.sparkContext
 
-for n in spark.catalog.listDatabases():
-    print(n.name)
-
-for n in spark.catalog.listTables("quantdb"):
-    print(n.name)
-
-
 data = spark.read.format("avro").table('quantdb.snapshots')
 
 #=================definition of constants============
 
 TOTAL_LEVELS = 5
-LOOK_FWD = 100
+LOOK_FWD = 80
 
 
 features_for_training = [
@@ -194,11 +189,11 @@ data = data\
         )
 features_for_training.append('level_diff_price_sum')
 
-# extracting the future price
-w  = Window.orderBy("tstamp")
+# extracting the future moving mean
+w = Window.orderBy("tstamp").rowsBetween(1, LOOK_FWD)
 data_w_labels = data.withColumn(
     "f_price",
-    F.lag(data.mid_price, -LOOK_FWD, -1).over(w)
+    F.avg(data.mid_price).over(w)
     ).limit(data.count() - LOOK_FWD)
 
 # extracting the price trend label
@@ -207,26 +202,39 @@ data_w_labels = data_w_labels.withColumn(
     (data_w_labels.mid_price > data_w_labels.f_price)\
         .cast('integer')
     )\
-    .drop(
-    data_w_labels.f_price
-        )
-        
+    .drop(data_w_labels.f_price)
+
+w = Window.orderBy("tstamp")
+data_w_labels = data_w_labels.withColumn(
+    "index",
+    F.row_number().over(w)
+    )
+    
+data_w_labels = data_w_labels\
+    .where(data_w_labels.index % 3 == 0)
+
+
 #================Data preprocessing===================
+from pyspark.ml import Pipeline
+from pyspark.ml.feature import MinMaxScaler, VectorAssembler
 
+split_point = int(data_w_labels.count() * 0.8)
+raw_train_data = data_w_labels\
+    .where(data_w_labels.index < split_point)
+raw_test_data = data_w_labels\
+    .where(data_w_labels.index >= split_point)
 
-(train_data, test_data) = data_w_labels.randomSplit([0.8, 0.2])
+# (train_data, test_data) = data_w_labels.randomSplit([0.8, 0.2])
 
 assembler = VectorAssembler(inputCols=features_for_training, outputCol= "features")
 mmScaler= MinMaxScaler(inputCol = "features", outputCol = "scaled_features")   
 
 pipe = Pipeline(stages = [assembler, mmScaler])
 
-pipe = pipe.fit(train_data)
-train_data = pipe.transform(train_data)
-test_data = pipe.transform(test_data)
+pipe = pipe.fit(raw_train_data)
+train_data = pipe.transform(raw_train_data)
+test_data = pipe.transform(raw_test_data)
 
-
-from datetime import datetime
 
 def eval_m(model, train_data, test_data, evaluator):
     start = datetime.now()
@@ -240,14 +248,13 @@ def eval_m(model, train_data, test_data, evaluator):
     )
     return out
 
-    from pyspark.ml.classification import GBTClassifier
-from pyspark.ml.evaluation import BinaryClassificationEvaluator as BCE
-
-#===================Training and evaluating the movel=============
+#================GBTC training=================
 evaluator = BCE(rawPredictionCol='prediction', labelCol='label')
 model_gbt = GBTClassifier(
-    maxDepth=15, 
-    maxMemoryInMB=512
+    maxDepth=5, 
+    maxMemoryInMB=512,
+    maxBins=64,
+    stepSize=0.05
 )
 
 print("===========gbt eval=================")
@@ -256,13 +263,128 @@ model_gbt = model_gbt.fit(train_data)
 print("Train time:{}".format((datetime.now()-start).total_seconds()))
 scores_gbt = eval_m(model_gbt, train_data, test_data, evaluator)
 
-#================saving the test predictions==================
-test_data_out=model_gbt.transform(test_data)
-test_data_out.coalesce(1)\
-    .select("tstamp",'prediction')\
+
+#===================feature importance save and filter=======================
+
+importance = model_gbt.featureImportances
+fi = [(feature, float(val)) for feature, val in zip(features_for_training, importance)]
+fi_df = spark.createDataFrame(data=fi, schema=StructType([
+     StructField("feature",StringType(),True),
+     StructField("value",DoubleType(),True)
+    ]))
+
+fi_df.coalesce(1)\
+    .select("feature",'value')\
     .write\
     .mode("overwrite")\
     .format("csv")\
     .option("sep", ",")\
     .option("header","true")\
-    .csv("/project/output/predictions.csv")
+    .csv("/project/output/features_full")
+    
+features_pca = [n[0] for n in sorted(fi, key=lambda x: x[1], reverse=True)[10:]]
+features_main = [n[0] for n in sorted(fi, key=lambda x: x[1], reverse=True)[:10]]
+
+#=================preprocessing with PCA===================
+from pyspark.ml.feature import PCA
+
+# train_data = train_data.drop(["features", "raw_pca_features", "scaled_pca_features", "pca_features", "raw_main_features", "scaled_main_features"])
+
+assembler_pca = VectorAssembler(inputCols=features_pca, outputCol= "raw_pca_features")
+mmScaler_pca= MinMaxScaler(inputCol = "raw_pca_features", outputCol = "scaled_pca_features")   
+pca = PCA(k=2, inputCol="scaled_pca_features", outputCol="pca_features")
+
+assembler_main = VectorAssembler(inputCols=features_main, outputCol= "raw_main_features")
+mmScaler_main= MinMaxScaler(inputCol = "raw_main_features", outputCol = "scaled_main_features")
+
+assembler_final = VectorAssembler(inputCols=["scaled_main_features", "pca_features"], outputCol= "features")
+
+pipe = Pipeline(stages = [
+    assembler_pca, 
+    mmScaler_pca,
+    pca,
+    assembler_main,
+    mmScaler_main,
+    assembler_final
+    ])
+
+pipe = pipe.fit(raw_train_data)
+train_data = pipe.transform(raw_train_data)
+test_data = pipe.transform(raw_test_data)
+
+#================GBTC training on PCAed data=================
+evaluator = BCE(rawPredictionCol='prediction', labelCol='label')
+model_gbt = GBTClassifier(
+    maxDepth=5, 
+    maxMemoryInMB=512,
+    maxBins=64,
+    stepSize=0.05
+)
+
+print("===========gbt eval=================")
+start = datetime.now()
+model_gbt = model_gbt.fit(train_data)
+print("Train time:{}".format((datetime.now()-start).total_seconds()))
+scores_gbt = eval_m(model_gbt, train_data, test_data, evaluator)
+
+
+#===================saving new feature importance====================
+
+importance = model_gbt.featureImportances
+fi = [(feature, float(val)) for feature, val in zip(features_main + ['pca_1', 'pca_2'], importance)]
+fi_df = spark.createDataFrame(data=fi, schema=StructType([
+     StructField("feature",StringType(),True),
+     StructField("value",DoubleType(),True)
+    ]))
+
+fi_df.coalesce(1)\
+    .select("feature",'value')\
+    .write\
+    .mode("overwrite")\
+    .format("csv")\
+    .option("sep", ",")\
+    .option("header","true")\
+    .csv("/project/output/features_short")
+    
+#====================SVC training====================
+
+model_svc = LinearSVC(
+    featuresCol="features",
+    maxIter=30, 
+    aggregationDepth=4
+)
+
+print("===========vsc eval=================")
+start = datetime.now()
+model_svc = model_svc.fit(train_data)
+print("Train time:{}".format((datetime.now()-start).total_seconds()))
+scores_svc = eval_m(model_svc, train_data, test_data, evaluator)
+
+#====================MPC training====================
+model_mpc = MultilayerPerceptronClassifier(
+    featuresCol="features",
+    maxIter=40,
+    layers=[len(features_main) + 2, 512,128,2]
+)
+
+print("===========mpc eval=================")
+start = datetime.now()
+model_mpc = model_mpc.fit(train_data)
+print("Train time:{}".format((datetime.now()-start).total_seconds()))
+scores_mpc = eval_m(model_mpc, train_data, test_data, evaluator)
+
+#================saving the test predictions==================
+for model in zip(
+        [model_gbt, model_mpc, model_svc],
+        ["gbc", "mpc", "svc"]
+    ):
+    test_data_out=model[0].transform(test_data)
+    test_data_out.coalesce(1)\
+        .select("tstamp",'mid_price','label','prediction')\
+        .write\
+        .mode("overwrite")\
+        .format("csv")\
+        .option("sep", ",")\
+        .option("header","true")\
+        .csv("/project/output/predictions_{}".format(model[1]))
+    model[0].save("/project/models/model_{}".format(model[1]))

@@ -1,0 +1,49 @@
+feature,value
+bid_level_1_price,0.00821181466236977
+bid_level_2_price,0.0054198611878723945
+bid_level_3_price,0.011860201487611376
+bid_level_4_price,0.006281197583583284
+bid_level_5_price,0.01566622850903207
+ask_level_1_price,0.0
+ask_level_2_price,0.0060241072983168885
+ask_level_3_price,0.0086129330855001
+ask_level_4_price,0.0173008945142474
+ask_level_5_price,0.021117413727225018
+bid_level_1_quantity,0.08444313738208346
+bid_level_2_quantity,0.05116002659995272
+bid_level_3_quantity,0.016103974493262483
+bid_level_4_quantity,0.0308418422828581
+bid_level_5_quantity,0.019309303115634977
+ask_level_1_quantity,0.06017175800646985
+ask_level_2_quantity,0.029050970972402126
+ask_level_3_quantity,0.022436218651831485
+ask_level_4_quantity,0.026714317792343026
+ask_level_5_quantity,0.01620272169258405
+mid_price,0.0
+level_1_diff,0.0
+level_2_diff,0.010761068164537027
+level_3_diff,0.007760631425254809
+level_4_diff,0.005081617958330349
+level_5_diff,0.012877451242226761
+ask_level_2_price - ask_level_1_price,0.024996670707013776
+bid_level_1_price - bid_level_2_price,0.0
+ask_level_3_price - ask_level_2_price,0.003186836275966095
+bid_level_2_price - bid_level_3_price,0.02170123068033817
+ask_level_4_price - ask_level_3_price,0.02247224847192178
+bid_level_3_price - bid_level_4_price,0.04039390555489917
+ask_level_5_price - ask_level_4_price,0.05316973285154603
+bid_level_4_price - bid_level_5_price,0.04797015973804272
+ask_level_2_price - ask_level_1_price,0.0
+bid_level_1_price - bid_level_2_price,0.0
+ask_level_3_price - ask_level_1_price,0.013993886469261554
+bid_level_1_price - bid_level_3_price,0.0
+ask_level_4_price - ask_level_1_price,0.01728812550502918
+bid_level_1_price - bid_level_4_price,0.0
+ask_level_5_price - ask_level_1_price,0.054458309255198206
+bid_level_1_price - bid_level_5_price,0.0
+avg_asks_price,0.0
+avg_asks_quantity,0.024735177360478727
+avg_bids_price,0.007384666853011498
+avg_bids_quantity,0.03368867875070451
+level_diff_quantity_sum,0.08028141196236853
+level_diff_price_sum,0.06086926772869028

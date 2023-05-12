@@ -1,0 +1,13 @@
+feature,value
+bid_level_1_quantity,0.1085156071547408
+level_diff_quantity_sum,0.1040398103762107
+level_diff_price_sum,0.0544922632450826
+ask_level_1_quantity,0.09468471498303321
+ask_level_5_price - ask_level_1_price,0.07277738985069847
+ask_level_5_price - ask_level_4_price,0.04182520486295834
+bid_level_2_quantity,0.0843711016928754
+bid_level_4_price - bid_level_5_price,0.06351414992721813
+bid_level_3_price - bid_level_4_price,0.050158376151301164
+avg_bids_quantity,0.057820651888084544
+pca_1,0.24034818675114009
+pca_2,0.027452543116656604

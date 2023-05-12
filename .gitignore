@@ -1,3 +1,4 @@
 data/
-output/
 sql/db copy.sql
+sql/import copy.sql
+logs

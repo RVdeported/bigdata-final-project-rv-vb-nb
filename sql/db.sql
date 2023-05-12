@@ -3,8 +3,8 @@
 DROP TABLE IF EXISTS snapshots;
 
 CREATE TABLE IF NOT EXISTS snapshots(
-  tstamp TIMESTAMP PRIMARY KEY, 
-  last_update_id BIGINT, 
+  tstamp TIMESTAMP, 
+  last_update_id BIGINT PRIMARY KEY, 
 
   bid_level_1_price DOUBLE PRECISION, 
   bid_level_2_price DOUBLE PRECISION, 
