@@ -8,7 +8,7 @@ SELL_R = 0.5
 COMMISSION = 0.0001
 
 def backtest():
-    df1 = pd.read_csv("/root/bigdata-final-project-rv-vb-nb/output/predictions_mpc.csv")
+    df1 = pd.read_csv("./output/predictions_mpc.csv")
     assets = 0
     balance = 1000000
     last_price = 0

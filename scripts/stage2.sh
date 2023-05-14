@@ -25,7 +25,7 @@ diff_q_lvl4,\
 diff_q_lvl5"\
  > ./output/q2.csv
 
- cat /root/q2/* >> ./output/q2.csv
+cat /root/q2/* >> ./output/q2.csv
 
 echo "timestamp,\
 m_avg"\

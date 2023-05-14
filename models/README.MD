@@ -1,1 +1,1 @@
-
+Folder contains the three Apache Spark models exploited during the model construction

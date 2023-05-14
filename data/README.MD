@@ -1,1 +1,1 @@
-
+Folder contains a zip file with extracted data from Binance exchange. Specifically, there is BTCUSDT data for 14th april 2023.
